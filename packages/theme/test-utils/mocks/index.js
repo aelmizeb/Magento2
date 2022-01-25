@@ -5,5 +5,8 @@ export * from './useGuestUser';
 export * from './useShipping';
 export * from './useUser';
 export * from './useUserBilling';
+export * from './useCart';
+export * from './useForgotPassword';
+export * from './useReview';
 export * from './useUiState';
 export * from './cartGetters';
