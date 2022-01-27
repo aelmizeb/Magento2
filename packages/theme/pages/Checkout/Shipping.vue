@@ -233,7 +233,7 @@
       </div>
       <VsfShippingProvider
         v-if="isShippingDetailsStepCompleted && !dirty"
-        @submit="$router.push('/checkout/billing')"
+        @submit="$router.push(`${localePath('/checkout/billing')}`)"
       />
     </form>
   </ValidationObserver>
@@ -250,7 +250,8 @@ import {
   ref,
   computed,
   watch,
-  onMounted, defineComponent,
+  onMounted,
+  defineComponent, useRouter, useContext,
 } from '@nuxtjs/composition-api';
 import { onSSR } from '@vue-storefront/core';
 import {
@@ -264,6 +265,8 @@ import {
 import { required, min, digits } from 'vee-validate/dist/rules';
 import { ValidationProvider, ValidationObserver, extend } from 'vee-validate';
 import { addressFromApiToForm } from '~/helpers/checkout/address';
+import { mergeItem } from '~/helpers/asyncLocalStorage';
+import { isPreviousStepValid } from '~/helpers/checkout/steps';
 
 const NOT_SELECTED_ADDRESS = '';
 
@@ -293,6 +296,8 @@ export default defineComponent({
     VsfShippingProvider: () => import('~/components/Checkout/VsfShippingProvider.vue'),
   },
   setup() {
+    const router = useRouter();
+    const { app } = useContext();
     const {
       load,
       save,
@@ -311,7 +316,6 @@ export default defineComponent({
       country,
     } = useCountrySearch('Step:Shipping');
     const { isAuthenticated } = useUser();
-
     const shippingDetails = ref(addressFromApiToForm(address.value) || {});
     const currentAddressId = ref(NOT_SELECTED_ADDRESS);
 
@@ -343,6 +347,7 @@ export default defineComponent({
         ...shippingDetails.value,
         customerAddressId: addressId,
       };
+      await mergeItem('checkout', { shipping: shippingDetailsData });
       // @TODO remove ignore when https://github.com/vuestorefront/vue-storefront/issues/5967 is applied
       // @ts-ignore
       await save({ shippingDetails: shippingDetailsData });
@@ -409,6 +414,11 @@ export default defineComponent({
     });
 
     onMounted(async () => {
+      const validStep = await isPreviousStepValid('user-account');
+      if (!validStep) {
+        await router.push(app.localePath('/checkout/user-account'));
+      }
+
       if (shippingDetails.value?.country_code) {
         await searchCountry({ id: shippingDetails.value.country_code });
       }

@@ -110,6 +110,7 @@
         class="form__element"
         :disabled="createUserAccount"
       />
+      <recaptcha v-if="isRecaptchaEnabled" />
       <div class="form">
         <div class="form__action">
           <SfButton
@@ -139,14 +140,16 @@ import {
   computed,
   defineComponent,
   useRouter,
+  useContext, onMounted,
 } from '@nuxtjs/composition-api';
 import { useUser, useGuestUser } from '@vue-storefront/magento';
 import {
   required, min, email,
 } from 'vee-validate/dist/rules';
 import { ValidationProvider, ValidationObserver, extend } from 'vee-validate';
-import { customerPasswordRegExp, invalidPasswordMsg } from '../../helpers/customer/regex';
 import { useUiNotification } from '~/composables';
+import { getItem, mergeItem } from '~/helpers/asyncLocalStorage';
+import { customerPasswordRegExp, invalidPasswordMsg } from '../../helpers/customer/regex';
 
 extend('required', {
   ...required,
@@ -179,6 +182,8 @@ export default defineComponent({
   },
   setup() {
     const router = useRouter();
+    const { app, $recaptcha, $config } = useContext();
+    const isRecaptchaEnabled = ref(typeof $recaptcha !== 'undefined' && $config.isRecaptcha);
 
     const {
       attachToCart,
@@ -215,7 +220,17 @@ export default defineComponent({
     });
 
     const handleFormSubmit = (reset) => async () => {
+      if (isRecaptchaEnabled.value) {
+        $recaptcha.init();
+      }
+
       if (!isAuthenticated.value) {
+        if (isRecaptchaEnabled.value && createUserAccount.value) {
+          const recaptchaToken = await $recaptcha.getResponse();
+          form.value.recaptchaToken = recaptchaToken;
+          form.value.recaptchaInstance = $recaptcha;
+        }
+
         await (
           !createUserAccount.value
             ? attachToCart({ email: form.value.email })
@@ -224,16 +239,23 @@ export default defineComponent({
       }
 
       if (loginUserAccount.value) {
+        const recaptchaParams = {};
+        if (isRecaptchaEnabled.value) {
+          recaptchaParams.recaptchaToken = await $recaptcha.getResponse();
+        }
+
         await login({
           user: {
             username: form.value.email,
             password: form.value.password,
+            ...recaptchaParams,
           },
         });
       }
 
       if (!hasError.value) {
-        await router.push('/checkout/shipping');
+        await mergeItem('checkout', { 'user-account': form.value });
+        await router.push(`${app.localePath('/checkout/shipping')}`);
         reset();
         isFormSubmitted.value = true;
       } else {
@@ -246,15 +268,29 @@ export default defineComponent({
           title: 'Error',
         });
       }
+
+      if (isRecaptchaEnabled.value) {
+        // reset recaptcha
+        $recaptcha.reset();
+      }
     };
 
     onSSR(async () => {
       await load();
-
       if (isAuthenticated.value) {
         form.value.firstname = user.value.firstname;
         form.value.lastname = user.value.lastname;
         form.value.email = user.value.email;
+      }
+    });
+
+    onMounted(async () => {
+      const checkout = await getItem('checkout');
+      if (checkout && checkout['user-account']) {
+        const data = checkout['user-account'];
+        form.value.email = data.email;
+        form.value.firstname = data.firstname;
+        form.value.lastname = data.lastname;
       }
     });
 
@@ -269,6 +305,7 @@ export default defineComponent({
       loading,
       loginUserAccount,
       user,
+      isRecaptchaEnabled,
     };
   },
 });

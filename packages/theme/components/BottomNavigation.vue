@@ -1,15 +1,13 @@
 <template>
   <!-- TODO: create logic with isActive prop for BottomNavigationItems -->
   <SfBottomNavigation class="navigation-bottom smartphone-only">
-    <nuxt-link to="/">
-      <SfBottomNavigationItem
-        :class="$route.path == '/' ? 'sf-bottom-navigation__item--active' : ''"
-        icon="home"
-        size="20px"
-        label="Home"
-        @click="isMobileMenuOpen ? toggleMobileMenu() : false"
-      />
-    </nuxt-link>
+    <SfBottomNavigationItem
+      :class="$route.path == '/' ? 'sf-bottom-navigation__item--active' : ''"
+      icon="home"
+      size="20px"
+      label="Home"
+      @click="$router.push(app.localePath('/')) && (isMobileMenuOpen ? toggleMobileMenu() : false)"
+    />
     <SfBottomNavigationItem
       icon="menu"
       size="20px"
@@ -52,7 +50,7 @@
 <script>
 import { SfBottomNavigation, SfIcon, SfCircleIcon } from '@storefront-ui/vue';
 import { useUser } from '@vue-storefront/magento';
-import { defineComponent, useRouter } from '@nuxtjs/composition-api';
+import { defineComponent, useRouter, useContext } from '@nuxtjs/composition-api';
 import { useUiState } from '~/composables';
 
 export default defineComponent({
@@ -71,10 +69,10 @@ export default defineComponent({
     } = useUiState();
     const { isAuthenticated } = useUser();
     const router = useRouter();
-
+    const { app } = useContext();
     const handleAccountClick = async () => {
       if (isAuthenticated.value) {
-        return router.push('/my-account');
+        await router.push(`${app.localePath('/my-account')}`);
       }
       toggleLoginModal();
     };
@@ -86,6 +84,7 @@ export default defineComponent({
       toggleCartSidebar,
       toggleMobileMenu,
       handleAccountClick,
+      app,
     };
   },
 });

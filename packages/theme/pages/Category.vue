@@ -89,11 +89,16 @@
 
     <div class="main section">
       <div class="sidebar desktop-only">
-        <LazyHydrate when-visible>
-          <category-sidebar-menu
-            :no-fetch="true"
-          />
-        </LazyHydrate>
+        <SfLoader
+          :class="{ loading: isCategoriesLoading }"
+          :loading="isCategoriesLoading"
+        >
+          <LazyHydrate when-visible>
+            <category-sidebar-menu
+              :no-fetch="true"
+            />
+          </LazyHydrate>
+        </SfLoader>
       </div>
       <SfLoader
         :class="{ loading: isProductsLoading }"
@@ -117,9 +122,11 @@
               class="products__product-card"
               :style="{ '--index': i }"
               :title="productGetters.getName(product)"
-              :image="productGetters.getProductThumbnailImage(product)"
-              :regular-price="$n(productGetters.getPrice(product).regular, 'currency')"
-              :special-price="productGetters.getPrice(product).special && $n(productGetters.getPrice(product).special, 'currency')"
+              :image-width="imageSizes.productCard.width"
+              :image-height="imageSizes.productCard.height"
+              :image="getMagentoImage(productGetters.getProductThumbnailImage(product))"
+              :regular-price="$fc(productGetters.getPrice(product).regular)"
+              :special-price="productGetters.getPrice(product).special && $fc(productGetters.getPrice(product).special)"
               :score-rating="productGetters.getAverageRating(product)"
               :reviews-count="productGetters.getTotalReviews(product)"
               :show-add-to-cart-button="true"
@@ -136,7 +143,37 @@
               "
               @click:wishlist="addItemToWishlist(product)"
               @click:add-to-cart="addItemToCart({ product, quantity: 1 })"
-            />
+            >
+              <template #image="imageSlotProps">
+                <SfButton
+                  :link="imageSlotProps.link"
+                  class="sf-button--pure sf-product-card__link"
+                  data-testid="product-link"
+                  aria-label="Go To Product"
+                  v-on="$listeners"
+                >
+                  <template v-if="Array.isArray(imageSlotProps.image)">
+                    <nuxt-img
+                      v-for="(picture, key) in imageSlotProps.image.slice(0, 2)"
+                      :key="key"
+                      class="sf-product-card__picture"
+                      :src="picture"
+                      :alt="imageSlotProps.title"
+                      :width="imageSlotProps.imageWidth"
+                      :height="imageSlotProps.imageHeight"
+                    />
+                  </template>
+                  <nuxt-img
+                    v-else
+                    class="sf-product-card__image lol"
+                    :src="imageSlotProps.image"
+                    :alt="imageSlotProps.title"
+                    :width="imageSlotProps.imageWidth"
+                    :height="imageSlotProps.imageHeight"
+                  />
+                </SfButton>
+              </template>
+            </SfProductCard>
           </transition-group>
           <transition-group
             v-else
@@ -152,9 +189,11 @@
               :style="{ '--index': i }"
               :title="productGetters.getName(product)"
               :description="productGetters.getDescription(product)"
-              :image="productGetters.getProductThumbnailImage(product)"
-              :regular-price="$n(productGetters.getPrice(product).regular, 'currency')"
-              :special-price="productGetters.getPrice(product).special && $n(productGetters.getPrice(product).special, 'currency')"
+              :image="getMagentoImage(productGetters.getProductThumbnailImage(product))"
+              :image-width="imageSizes.productCardHorizontal.width"
+              :image-height="imageSizes.productCardHorizontal.height"
+              :regular-price="$fc(productGetters.getPrice(product).regular)"
+              :special-price="productGetters.getPrice(product).special && $fc(productGetters.getPrice(product).special)"
               :score-rating="productGetters.getAverageRating(product)"
               :reviews-count="productGetters.getTotalReviews(product)"
               :is-in-wishlist="isInWishlist({product})"
@@ -167,9 +206,37 @@
                   )}${productGetters.getSlug(product, product.categories[0])}`
                 )
               "
-              @click:wishlist="addItemToWishlist(product)"
               @click:add-to-cart="addItemToCart({ product, quantity: 1 })"
             >
+              <template #image="imageSlotProps">
+                <SfLink
+                  :link="imageSlotProps.link"
+                  class="
+                    sf-product-card-horizontal__link
+                    sf-product-card-horizontal__link--image
+                  "
+                >
+                  <template v-if="Array.isArray(imageSlotProps.image)">
+                    <nuxt-img
+                      v-for="(picture, key) in imageSlotProps.image.slice(0, 2)"
+                      :key="key"
+                      class="sf-product-card-horizontal__picture"
+                      :src="picture"
+                      :alt="imageSlotProps.title"
+                      :width="imageSlotProps.imageWidth"
+                      :height="imageSlotProps.imageHeight"
+                    />
+                  </template>
+                  <nuxt-img
+                    v-else
+                    class="sf-product-card-horizontal__image"
+                    :src="imageSlotProps.image"
+                    :alt="imageSlotProps.title"
+                    :width="imageSlotProps.imageWidth"
+                    :height="imageSlotProps.imageHeight"
+                  />
+                </SfLink>
+              </template>
               <template #configuration>
                 <SfProperty
                   class="desktop-only"
@@ -187,8 +254,9 @@
                 <SfButton
                   class="sf-button--text desktop-only"
                   style="margin: 0 0 1rem auto; display: block"
+                  @click="addItemToWishlist(product)"
                 >
-                  {{ $t('Save for later') }}
+                  {{ isInWishlist({product}) ? $t('Remove from Wishlist') : $t('Save for later') }}
                 </SfButton>
               </template>
             </SfProductCardHorizontal>
@@ -363,11 +431,12 @@ import {
   useWishlist,
 } from '@vue-storefront/magento';
 import { onSSR, useVSFContext } from '@vue-storefront/core';
-import CategorySidebarMenu from '~/components/Category/CategorySidebarMenu';
 import { useUrlResolver } from '~/composables/useUrlResolver.ts';
-import { useUiHelpers, useUiState } from '~/composables';
+import { useUiHelpers, useUiState, useImage } from '~/composables';
 import cacheControl from '~/helpers/cacheControl';
 import { useAddToCart } from '~/helpers/cart/addToCart';
+import CategorySidebarMenu from '~/components/Category/CategorySidebarMenu';
+
 
 // TODO(addToCart qty, horizontal): https://github.com/vuestorefront/storefront-ui/issues/1606
 export default defineComponent({
@@ -426,7 +495,11 @@ export default defineComponent({
       isInCart,
     } = useAddToCart();
 
-    const selectedFilters = ref(Object.fromEntries((magentoConfig.facets.available).map((curr) => [curr, (curr === 'price' ? '' : [])])));
+    const selectedFilters = ref(Object.fromEntries(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      (magentoConfig.facets.available)
+        .map((curr) => [curr, (curr === 'price' ? '' : [])]),
+    ));
 
     const products = computed(() => facetGetters.getProducts(result.value));
 
@@ -528,6 +601,7 @@ export default defineComponent({
       const categoryId = activeCategoryUid(routeData.value?.entity_uid)
         ? activeCategoryUid(routeData.value?.entity_uid)
         : routeData.value?.entity_uid;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await search({
         ...uiHelpers.getFacetsFromURL(),
         categoryId,
@@ -535,13 +609,16 @@ export default defineComponent({
     };
 
     const isProductsLoading = ref(false);
+    const isCategoriesLoading = ref(false);
     onSSR(async () => {
       isProductsLoading.value = true;
+      isCategoriesLoading.value = true;
       await resolveUrl();
 
       await categoriesSearch({
         pageSize: 20,
       });
+      isCategoriesLoading.value = false;
 
       if (routeData?.value) {
         if (facets.value && facets.value.length > 0) {
@@ -566,6 +643,8 @@ export default defineComponent({
       }
     });
 
+    const { getMagentoImage, imageSizes } = useImage();
+
     return {
       routeData,
       ...uiState,
@@ -582,6 +661,7 @@ export default defineComponent({
       isInCart,
       isInWishlist,
       isProductsLoading,
+      isCategoriesLoading,
       pagination,
       productGetters,
       products,
@@ -589,6 +669,8 @@ export default defineComponent({
       selectFilter,
       sortBy,
       uiHelpers,
+      getMagentoImage,
+      imageSizes,
     };
   },
 });

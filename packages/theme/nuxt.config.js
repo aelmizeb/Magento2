@@ -14,6 +14,8 @@ const {
         externalCheckout,
         defaultStore,
         facets,
+        magentoBaseUrl,
+        imageProvider,
       },
     },
   },
@@ -98,7 +100,10 @@ export default {
       externalCheckout,
       defaultStore,
       facets,
+      magentoBaseUrl,
+      imageProvider,
     }],
+    '@nuxt/image',
   ],
   modules: [
     ['nuxt-i18n', {
@@ -107,40 +112,55 @@ export default {
     'cookie-universal-nuxt',
     'vue-scrollto/nuxt',
     '@vue-storefront/middleware/nuxt',
-    '@nuxtjs/html-validator',
+    '@nuxt/image',
+    // '@nuxtjs/recaptcha',
   ],
+  recaptcha: {
+    hideBadge: config.get('recaptchaHideBadge'), // Hide badge element (v3 & v2 via size=invisible)
+    siteKey: config.get('recaptchaSiteKey'), // Site key for requests
+    version: config.get('recaptchaVersion'), // Version 2 or 3
+    size: config.get('recaptchaSize'), // Size: 'compact', 'normal', 'invisible' (v2)
+  },
+  publicRuntimeConfig: {
+    isRecaptcha: config.get('recaptchaEnabled'),
+  },
   i18n: {
     country: 'US',
     strategy: 'prefix',
     locales: [
       {
-        code: 'en',
-        label: 'English',
+        code: 'default',
         file: 'en.js',
         iso: 'en_US',
+        defaultCurrency: 'USD',
       },
       {
-        code: 'de',
-        label: 'German',
+        code: 'german',
         file: 'de.js',
         iso: 'de_DE',
+        defaultCurrency: 'EUR',
       },
     ],
-    defaultLocale: 'en',
+    defaultLocale: 'default',
+    autoChangeCookie: {
+      currency: false,
+      locale: false,
+      country: false,
+    },
     lazy: true,
     seo: true,
     langDir: 'lang/',
     vueI18n: {
-      fallbackLocale: 'en',
+      fallbackLocale: 'default',
       numberFormats: {
-        en: {
+        default: {
           currency: {
             style: 'currency',
             currency: 'USD',
             currencyDisplay: 'symbol',
           },
         },
-        de: {
+        german: {
           currency: {
             style: 'currency',
             currency: 'EUR',
@@ -203,12 +223,9 @@ export default {
             ...cfg.optimization.splitChunks,
             automaticNameDelimiter: '.',
             chunks: 'all',
-            enforceSizeThreshold: 40_000,
+            enforceSizeThreshold: 50_000,
             maxAsyncRequests: 30,
             maxInitialRequests: 30,
-            maxSize: 128_000,
-            minChunks: 1,
-            minSize: 0,
             cacheGroups: {
               ...cfg.optimization.splitChunks.cacheGroups,
               vendor: {
@@ -225,10 +242,21 @@ export default {
       }
     },
   },
+  plugins: [
+    '~/plugins/token-expired',
+    '~/plugins/i18n',
+    '~/plugins/fcPlugin',
+  ],
   router: {
     extendRoutes(routes) {
       getRoutes(`${__dirname}/_theme`)
         .forEach((route) => routes.unshift(route));
+    },
+  },
+  image: {
+    provider: config.get('imageProvider'),
+    cloudinary: {
+      baseURL: config.get('imageProviderBaseUrl'),
     },
   },
 };

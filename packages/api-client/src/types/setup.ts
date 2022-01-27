@@ -46,6 +46,8 @@ export type ConfigState = {
   setCurrency(id?: string | null): void;
   getLocale(): string;
   setLocale(id?: string | null): void;
+  getCountry(): string;
+  setCountry(id?: string | null): void;
 };
 
 export interface ClientConfig {
@@ -69,12 +71,21 @@ export interface ClientConfig {
   state: ConfigState;
 }
 
+export interface RecaptchaConfig {
+  isEnabled: boolean,
+  sitekey: string,
+  secretkey: string,
+  version: number,
+  score: number,
+}
+
 export interface Config<T = any> extends ClientConfig {
   client?: ApolloClient<T>;
   storage: Storage;
   customOptions?: ApolloClientOptions<any>;
   customApolloHttpLinkOptions?: HttpOptions;
   overrides: MagentoApiMethods;
+  recaptcha: RecaptchaConfig;
 }
 
 export interface ClientInstance extends ApolloClient<any> {

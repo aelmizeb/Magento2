@@ -33,7 +33,7 @@
           />
           <SfProperty
             name="Total"
-            :value="$n(orderGetters.getPrice(currentOrder), 'currency')"
+            :value="$fc(orderGetters.getPrice(currentOrder))"
             class="sf-property--full-width property"
           />
         </div>
@@ -50,12 +50,12 @@
             :key="i"
           >
             <SfTableData class="products__name">
-              <nuxt-link :to="'/p/'+orderGetters.getItemSku(item)+'/'+orderGetters.getItemSku(item)">
+              <nuxt-link :to="localePath('/p/'+orderGetters.getItemSku(item)+'/'+orderGetters.getItemSku(item))">
                 {{ orderGetters.getItemName(item) }}
               </nuxt-link>
             </SfTableData>
             <SfTableData>{{ orderGetters.getItemQty(item) }}</SfTableData>
-            <SfTableData>{{ $n(orderGetters.getItemPrice(item), 'currency') }}</SfTableData>
+            <SfTableData>{{ $fc(orderGetters.getItemPrice(item)) }}</SfTableData>
           </SfTableRow>
         </SfTable>
       </div>
@@ -73,7 +73,7 @@
           <SfButton
             data-cy="order-history-btn_start"
             class="no-orders__button"
-            @click="$router.push('/')"
+            @click="$router.push(localePath('/'))"
           >
             {{ $t('Start shopping') }}
           </SfButton>
@@ -97,7 +97,7 @@
           >
             <SfTableData>{{ orderGetters.getId(order) }}</SfTableData>
             <SfTableData>{{ orderGetters.getDate(order) }}</SfTableData>
-            <SfTableData>{{ $n(orderGetters.getPrice(order), 'currency') }}</SfTableData>
+            <SfTableData>{{ $fc(orderGetters.getPrice(order)) }}</SfTableData>
             <SfTableData>
               <span :class="getStatusTextClass(order)">{{ orderGetters.getStatus(order) }}</span>
             </SfTableData>

@@ -40,8 +40,8 @@
             </div>
             <div class="product__price-and-rating">
               <SfPrice
-                :regular="$n(productPrice, 'currency')"
-                :special="productSpecialPrice && $n(productSpecialPrice, 'currency')"
+                :regular="$fc(productPrice)"
+                :special="productSpecialPrice && $fc(productSpecialPrice)"
               />
               <div>
                 <div class="product__rating">
@@ -354,7 +354,7 @@ export default defineComponent({
     } = useReview(`productReviews-${id}`);
     const { isAuthenticated } = useUser();
     const { addItem: addItemToWishlist, isInWishlist } = useWishlist('GlobalWishlist');
-    const { error: nuxtError } = useContext();
+    const { error: nuxtError, app } = useContext();
     const basePrice = ref(0);
     const openTab = ref(1);
     const productDataIsLoading = computed(() => productLoading.value && !productGetters.getName(product.value));
@@ -414,7 +414,7 @@ export default defineComponent({
           return productGetters.getPrice(product.value).special;
       }
     });
-    
+
     const changeTab = (tabNumber, callback) => {
       document
         .querySelector('#tabs')
@@ -449,7 +449,7 @@ export default defineComponent({
       productConfiguration.value.push([label, value]);
 
       await router.push({
-        path: route.value.fullPath,
+        path: `${app.localePath(route.value.fullPath)}`,
         query: {
           ...Object.fromEntries(productConfiguration.value),
         },
@@ -521,6 +521,7 @@ export default defineComponent({
   @include for-desktop {
     max-width: 1272px;
     margin: 0 auto;
+    padding: 0 1.5rem;
   }
 }
 
@@ -538,7 +539,7 @@ export default defineComponent({
     margin: var(--spacer-sm) auto;
     @include for-desktop {
       max-width: 32.625rem;
-      margin: 0 0 0 7.5rem;
+      margin: 0 0 0 2rem;
     }
   }
 

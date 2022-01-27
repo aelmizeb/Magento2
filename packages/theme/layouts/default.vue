@@ -8,13 +8,23 @@
 
     <div id="layout">
       <nuxt :key="route.fullPath" />
-
-      <BottomNavigation />
-      <CartSidebar />
-      <WishlistSidebar />
-      <LoginModal />
-      <Notification />
     </div>
+
+    <LazyHydrate when-visible>
+      <BottomNavigation />
+    </LazyHydrate>
+    <LazyHydrate when-idle>
+      <CartSidebar />
+    </LazyHydrate>
+    <LazyHydrate when-idle>
+      <WishlistSidebar />
+    </LazyHydrate>
+    <LazyHydrate when-visible>
+      <LoginModal />
+    </LazyHydrate>
+    <LazyHydrate when-idle>
+      <Notification />
+    </LazyHydrate>
     <LazyHydrate when-visible>
       <AppFooter />
     </LazyHydrate>
@@ -23,21 +33,19 @@
 
 <script>
 import LazyHydrate from 'vue-lazy-hydration';
-import { onSSR } from '@vue-storefront/core';
-import { useRoute, defineComponent } from '@nuxtjs/composition-api';
+import { useRoute, defineComponent, onMounted } from '@nuxtjs/composition-api';
 import {
-  useCart,
   useUser,
 } from '@vue-storefront/magento';
 import AppHeader from '~/components/AppHeader.vue';
 import BottomNavigation from '~/components/BottomNavigation.vue';
-import AppFooter from '~/components/AppFooter.vue';
 import TopBar from '~/components/TopBar.vue';
 import CartSidebar from '~/components/CartSidebar.vue';
 import WishlistSidebar from '~/components/WishlistSidebar.vue';
 import LoginModal from '~/components/LoginModal.vue';
-import Notification from '~/components/Notification';
 import { useMagentoConfiguration } from '~/composables/useMagentoConfiguration';
+import Notification from '~/components/Notification';
+import AppFooter from '~/components/AppFooter.vue';
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -57,16 +65,11 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const { load: loadUser } = useUser();
-    const { load: loadCart } = useCart();
-
     const { loadConfiguration } = useMagentoConfiguration();
 
-    onSSR(async () => {
-      await loadConfiguration();
-      await Promise.all([
-        loadUser(),
-        loadCart(),
-      ]);
+    onMounted(() => {
+      loadConfiguration();
+      loadUser();
     });
 
     return {
